@@ -52,6 +52,7 @@ void report(TSPPathDistPair path) {
     tm* lc_now = localtime(&now);
     strftime(datetime_now, 80, fmt, lc_now);
     fprintf(stderr, "[%s] New distance caught: %.2lf\n", datetime_now, path.dist);
+    fflush(stderr);
     sprintf(filename, "log/%s.csv", datetime_now);
     FILE *log = fopen(filename, "w");
     instance->printPath(log, path.path);
