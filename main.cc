@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <ctime>
+#include <cstring>
 #include <string>
 #include <random>
 #include "tsp.hh"
