@@ -5,15 +5,15 @@
 #include <string>
 #include <random>
 #include "tsp.hh"
-#include "randommachine.hh"
+#include "annealer.hh"
 
 TSPInstance *instance;
-RandomMachine *annealer;
+Annealer *annealer;
 
 void parseArgs(int argc, char **argv) {
     int maxFitness = -1; // infinite mode
     int maxPopulation = 10;
-    int initialTemperature = 1000;
+    int initialTemperature = 5000000;
     if (argc <= 1) {
         printf("Usage: ./tsp [-f maxFitness] [-p maxPopulation] [-T initialTemperature] [filename]\n");
         exit(1);
@@ -31,7 +31,7 @@ void parseArgs(int argc, char **argv) {
             initialTemperature = atoi(argv[i]);
         } else {
             instance = new TSPInstance(argv[i], maxFitness, maxPopulation);
-            annealer = new RandomMachine((double)initialTemperature);
+            annealer = new Annealer((double)initialTemperature);
             return;
         }
     }
@@ -48,10 +48,10 @@ void signal_handler(int signal) {
 void report(TSPPathDistPair path) {
     const char* fmt = "%Y-%m-%dT%H:%M";
     char datetime_now[80], filename[100];
-    time_t now = time(0);
+    time_t now = time(NULL);
     tm* lc_now = localtime(&now);
     strftime(datetime_now, 80, fmt, lc_now);
-    printf("[%s] New distance caught: %.2lf\n", datetime_now, path.dist);
+    fprintf(stderr, "[%s] New distance caught: %.2lf\n", datetime_now, path.dist);
     sprintf(filename, "log/%s.csv", datetime_now);
     FILE *log = fopen(filename, "w");
     instance->printPath(log, path.path);
@@ -59,6 +59,8 @@ void report(TSPPathDistPair path) {
 }
 
 int main(int argc, char **argv) {
+    srand(time(NULL));
+    freopen("tsp.log", "w", stderr);
     signal(SIGINT, signal_handler);
     parseArgs(argc, argv);
     TSPPath *seedPath = instance->getBitonicPath();
@@ -66,7 +68,10 @@ int main(int argc, char **argv) {
     TSPPathDistPair bestPath = {seedDist, seedPath};
     TSPPathDistPair candidatePath, newCandidatePath;
     report(bestPath);
+    instance->pushCandidate(bestPath);
+    long long iteration = 1;
     while(instance->isFitnessAvailable()) {
+        printf("Iteration %lld: ", iteration);
         while(instance->nextCandidateAvailable()) {
             candidatePath = instance->getNextCandidate();
             instance->pushCandidate(candidatePath);
@@ -92,7 +97,7 @@ int main(int argc, char **argv) {
 
             //mutate downpath only
             newPath = originalPath->mutateDownpath();
-            double newDist = instance->evaluatePath(newPath);
+            newDist = instance->evaluatePath(newPath);
             if (newDist == -1) break;
             if (newDist < bestPath.dist) {
                 bestPath = {newDist, newPath};
@@ -106,8 +111,9 @@ int main(int argc, char **argv) {
                 delete newPath;
             }
 
+            //crossover of up/down path
             newPath = originalPath->crossoverPath();
-            double newDist = instance->evaluatePath(newPath);
+            newDist = instance->evaluatePath(newPath);
             if (newDist == -1) break;
             if (newDist < bestPath.dist) {
                 bestPath = {newDist, newPath};
@@ -123,6 +129,8 @@ int main(int argc, char **argv) {
         }
         instance->managePopulation();
         annealer->cool();
+        printf("bestPath: %.2lf, poolSize: %d\n",bestPath.dist,instance->poolSize());
+        iteration++;
     }
     return 0;
 }

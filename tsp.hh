@@ -1,6 +1,7 @@
 #ifndef __TSP_HH__
 #define __TSP_HH__
 #include <cstdio>
+#include <cstdlib>
 #include <cmath>
 #include <string>
 #include <algorithm>
@@ -9,6 +10,14 @@
 #include <queue>
 #define MAX_N 20000
 using namespace std;
+
+inline void swap(int &x, int &y)
+{
+    x ^= y;
+    y ^= x;
+    x ^= y;
+}
+
 class Point {
 public:
     int i;
@@ -29,16 +38,86 @@ public:
     TSPPath() {
     }
 
+    void shufflePath(vector <int> &v) {
+        int n = v.size();
+        int s = rand() % n;
+        int e = rand() % n;
+        if (s > e) {
+            swap(s,e);
+        }
+        auto it_begin = v.begin() + s;
+        auto it_end = v.begin() + e;
+        random_shuffle(it_begin, it_end);
+    }
+
     TSPPath* mutateUppath() {
         TSPPath* newPath = new TSPPath;
+        newPath->up = up;
+        newPath->down = down;
+        shufflePath(newPath->up);
         return newPath;
     }
+
     TSPPath* mutateDownpath() {
         TSPPath* newPath = new TSPPath;
+        newPath->up = up;
+        newPath->down = down;
+        shufflePath(newPath->down);
         return newPath;
     }
+
     TSPPath* crossoverPath() {
         TSPPath* newPath = new TSPPath;
+        int up_size = up.size(), down_size = down.size();
+
+        int s_up, e_up;
+        s_up = rand() % up_size;
+        e_up = rand() % up_size;
+        if (s_up > e_up) {
+            swap(s_up, e_up);
+        }
+
+        int s_down, e_down;
+        s_down = rand() % down_size;
+        e_down = rand() % down_size;
+        if (s_down > e_down) {
+            swap(s_down, e_down);
+        }
+
+        vector <int> crossover_subset;
+
+        int i;
+        for(i = s_up; i <= e_up; i++) {
+            crossover_subset.push_back(up[i]);
+        }
+        for(i = s_down; i <= e_down; i++) {
+            crossover_subset.push_back(down[i]);
+        }
+
+        random_shuffle(crossover_subset.begin(), crossover_subset.end());
+
+        int c = 0;
+        for(i=0;i<up_size;i++) {
+            if (i < s_up || i > e_up) {
+                newPath->up.push_back(up[i]);
+            } else {
+                int coin_toss = rand() % 2;
+                if (coin_toss) {
+                    newPath->up.push_back(crossover_subset[c++]);
+                }
+            }
+        }
+
+        for(i=0;i<down_size;i++) {
+            if (i < s_down || i > e_down) {
+                newPath->down.push_back(down[i]);
+            } else {
+                while(c < crossover_subset.size()) {
+                    newPath->down.push_back(crossover_subset[c++]);
+                }
+                i = e_down;
+            }
+        }
         return newPath;
     }
 };
@@ -167,14 +246,15 @@ public:
     double evaluatePath(TSPPath *path) {
         if (maxFitness > 0) maxFitness--;
         else if (maxFitness == 0) return -1;
+
         int i;
         int up_size = path->up.size();
-        int down_size = path->up.size();
+        int down_size = path->down.size();
         double dist = 0;
         for(i=1;i<up_size;i++) {
             dist += (a[path->up[i]] - a[path->up[i-1]]);
         }
-        dist += (a[n-1] - a[path->down[0]]);
+        dist += (a[path->up[up_size-1]] - a[path->down[0]]);
         for(i=1;i<down_size;i++) {
             dist += (a[path->down[i]] - a[path->down[i-1]]);
         }
@@ -218,6 +298,7 @@ public:
     void managePopulation() {
         int i;
         for(i=0;i<maxPopulation;i++) {
+            if (nextPopulation.empty()) break;
             currentPopulation.push(nextPopulation.top());
             nextPopulation.pop();
         }
@@ -226,6 +307,10 @@ public:
             delete _pair.path;
             nextPopulation.pop();
         }
+    }
+
+    int poolSize() {
+        return currentPopulation.size();
     }
 };
 #endif
