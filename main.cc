@@ -73,7 +73,6 @@ int main(int argc, char **argv) {
     instance->pushCandidate(bestPath);
     long long iteration = 1;
     while(instance->isFitnessAvailable()) {
-        printf("Iteration %lld: ", iteration);
         while(instance->nextCandidateAvailable()) {
             candidatePath = instance->getNextCandidate();
             instance->pushCandidate(candidatePath);
@@ -131,7 +130,9 @@ int main(int argc, char **argv) {
         }
         instance->managePopulation();
         annealer->cool();
-        printf("bestPath: %.2lf, poolSize: %d\n",bestPath.dist,instance->poolSize());
+        if (iteration % 100000 == 0) {
+            printf("[Iteration %lld] bestPath: %.2lf, poolSize: %d\n",iteration,bestPath.dist,instance->poolSize());
+        }
         iteration++;
     }
     return 0;
