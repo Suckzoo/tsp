@@ -239,7 +239,7 @@ public:
             delete[] back[i];
         }
         delete[] dy;
-        delete[] back[i];
+        delete[] back;
         printf("path calculated.\n");
         return bitonic;
     }
