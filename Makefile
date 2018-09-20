@@ -8,7 +8,12 @@ OBJS= $(SRCS:.cpp=.o)
 
 TARGET= tsp
 
-all: $(TARGET)
+all: pre-build build
+
+pre-build:
+	mkdir -p log
+
+build: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -17,3 +22,4 @@ clean:
 	rm -f tsp *.o
 	
 .PHONY: all clean
+
